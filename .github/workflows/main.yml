@@ -1,0 +1,60 @@
+
+name: Build Particular Waterfall Only (Fabric 26.3)
+
+on:
+  push:
+    branches: ["main", "master"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build waterfall-only Fabric mod
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify original cascade animation frames
+        shell: bash
+        run: |
+          for i in {0..11}; do
+            test -s "src/main/resources/assets/waterfallparticles/textures/particle/cascade_${i}.png"
+          done
+          test -s "src/main/resources/assets/waterfallparticles/particles/cascade.json"
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      - name: Set up Gradle 9.7.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.7.1'
+
+      - name: Build mod JAR
+        run: gradle --no-daemon --no-configuration-cache clean build
+
+      - name: Upload mod JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Particular-Waterfall-Only-Fabric-26.3
+          path: |
+            build/libs/particular-waterfall-only-*.jar
+            !build/libs/*-sources.jar
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach JAR to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/particular-waterfall-only-*.jar
